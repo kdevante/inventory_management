@@ -99,7 +99,7 @@ export default function Home() {
             <Button
               variant="outlined"
               onClick={() => {
-                addItem[itemName]
+                addItem(itemName)
                 setItemName['']
                 handleClose()
               }}
@@ -147,12 +147,12 @@ export default function Home() {
                 </Typography>
                 <Stack direction="row" spacing={2}>
                   <Button variant="contained" onClick={() => (
-                    addItem()
+                    addItem(name)
                   )}>
                     Add
                   </Button>
                   <Button variant="contained" onClick={() => (
-                    removeItem()
+                    removeItem(name)
                   )}>
                     Remove
                   </Button>
