@@ -1,7 +1,8 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
+import { getAuth, GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -17,7 +18,59 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const firestore = getFirestore(app)
-const storage = getStorage(app);
+const firestore = getFirestore(app);
+const auth = getAuth(app);
 
-export { firestore, storage }
+const googleProvider = new GoogleAuthProvider();
+
+const signUpWithEmail = async (email, password, name) => {
+    try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // Store additional user information in Firestore
+        await setDoc(doc(firestore, "users", user.uid), {
+            name: name,
+            email: email
+        });
+    } catch (error) {
+        console.error("Error signing up:", error);
+    }
+};
+
+const signInWithEmail = async (email, password) => {
+    try {
+        await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+        console.error("Error signing in:", error);
+    }
+};
+
+const signInWithGoogle = async () => {
+    try {
+        const result = await signInWithPopup(auth, googleProvider);
+        const user = result.user;
+
+        // Check if user already exists in Firestore
+        const userDoc = await getDoc(doc(firestore, "users", user.uid));
+        if (!userDoc.exists()) {
+            // If not, create a new document
+            await setDoc(doc(firestore, "users", user.uid), {
+                name: user.displayName,
+                email: user.email
+            });
+        }
+    } catch (error) {
+        console.error("Error signing in with Google:", error);
+    }
+};
+
+const signOutUser = async () => {
+    try {
+        await signOut(auth);
+    } catch (error) {
+        console.error("Error signing out:", error);
+    }
+};
+
+export { firestore, auth, signUpWithEmail, signInWithEmail, signInWithGoogle, signOutUser };
