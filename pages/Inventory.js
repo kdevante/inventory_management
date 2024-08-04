@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from "react";
 import { firestore, auth, signOutUser } from "@/firebase";
-import { Box, Button, Stack, TextField, Typography, Container, createTheme, ThemeProvider, IconButton, InputBase, Menu, MenuItem, Fab } from "@mui/material";
+import { Box, Modal, Button, Stack, TextField, Typography, Container, createTheme, ThemeProvider, IconButton, InputBase, Menu, MenuItem, Fab } from "@mui/material";
 import { collection, getDocs, query, doc, deleteDoc, setDoc, getDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { useRouter } from 'next/router';
@@ -18,6 +18,8 @@ export default function Inventory() {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
+  const [open, setOpen] = useState(false);
+  const [itemName, setItemName] = useState('');
   const router = useRouter();
 
   useEffect(() => {
@@ -34,19 +36,28 @@ export default function Inventory() {
   }, [router]);
 
   const updateInventory = async (uid) => {
-    const snapshot = query(collection(firestore, 'users', uid, 'inventory'));
-    const docs = await getDocs(snapshot);
-    const inventoryList = [];
-    docs.forEach((doc) => {
-      inventoryList.push({
-        name: doc.id,
-        ...doc.data()
+    try {
+      const snapshot = query(collection(firestore, 'users', uid, 'inventory'));
+      const docs = await getDocs(snapshot);
+      const inventoryList = [];
+      docs.forEach((doc) => {
+        inventoryList.push({
+          name: doc.id,
+          ...doc.data()
+        });
       });
-    });
-    setInventory(inventoryList);
+      setInventory(inventoryList);
+    } catch (error) {
+      console.error("Error updating inventory:", error);
+    }
   }
 
   const addItem = async (item) => {
+    if (!user) {
+      console.error("No user logged in");
+      return;
+    }
+
     const docRef = doc(collection(firestore, 'users', user.uid, 'inventory'), item);
     const docSnap = await getDoc(docRef);
 
@@ -61,6 +72,11 @@ export default function Inventory() {
   }
 
   const removeItem = async (item) => {
+    if (!user) {
+      console.error("No user logged in");
+      return;
+    }
+
     const docRef = doc(collection(firestore, 'users', user.uid, 'inventory'), item);
     const docSnap = await getDoc(docRef);
 
@@ -93,6 +109,9 @@ export default function Inventory() {
     setAnchorEl(null);
   };
 
+  const handleOpen = () => setOpen(true);
+  const handleClose = () => setOpen(false);
+
   return (
     <ThemeProvider theme={theme}>
       <Container component="main" maxWidth="lg" sx={{ width: { xs: '100%', lg: '70%' } }}>
@@ -113,7 +132,7 @@ export default function Inventory() {
               p={2}
               bgcolor="#ADD8E6"
             >
-              <Typography variant="h5">{user.displayName}'s Inventory</Typography>
+              <Typography variant="h5">{user.displayName}'s Pantry</Typography>
               <IconButton onClick={handleMenuOpen}>
                 <AccountCircleIcon fontSize="large" />
               </IconButton>
@@ -131,7 +150,7 @@ export default function Inventory() {
               alignItems="center"
               justifyContent="space-between"
               width="100%"
-              mb={2}
+            // mb={2}
             >
               {searchOpen ? (
                 <Box display="flex" alignItems="center" width="100%">
@@ -147,7 +166,7 @@ export default function Inventory() {
                 </Box>
               ) : (
                 <>
-                  <Typography variant="h4" color='#333'>Inventory</Typography>
+                  <Typography variant="h5" color='#333'>Items</Typography>
                   <IconButton onClick={() => setSearchOpen(true)}>
                     <SearchIcon />
                   </IconButton>
@@ -155,7 +174,7 @@ export default function Inventory() {
               )}
             </Box>
             <Box border="1px solid #333" width="100%">
-              <Stack width="100%" height="300px" spacing={2} overflow="auto">
+              <Stack width="100%" height="300px" spacing={0} overflow="auto">
                 {filteredInventory.map(({ name, quantity }) => (
                   <Box
                     key={name}
@@ -164,6 +183,7 @@ export default function Inventory() {
                     justifyContent="space-between"
                     bgcolor="#f0f0f0"
                     padding={2}
+                    borderBottom="1px solid #333"
                   >
                     <Typography variant="h5" color="#333">
                       {name.charAt(0).toUpperCase() + name.slice(1)}
@@ -181,13 +201,50 @@ export default function Inventory() {
               color="primary"
               aria-label="add"
               sx={{ position: 'fixed', bottom: 16, right: 16 }}
-              onClick={() => addItem()}
+              onClick={handleOpen}
             >
               <AddIcon />
             </Fab>
           </Box>
         )}
       </Container>
+      <Modal open={open} onClose={handleClose}>
+        <Box
+          position="absolute"
+          top="50%"
+          left="50%"
+          width={400}
+          bgcolor="beige"
+          border="2px solid black"
+          boxShadow={24}
+          padding={4}
+          flexDirection="column"
+          gap={3}
+          sx={{
+            transform: "translate(-50%,-50%)",
+          }}
+        >
+          <Typography variant="h6">Add Item</Typography>
+          <Stack width="100%" direction="row" spacing={2}>
+            <TextField
+              variant="outlined"
+              fullWidth
+              value={itemName}
+              onChange={(e) => setItemName(e.target.value)}
+            />
+            <Button
+              variant="outlined"
+              onClick={() => {
+                addItem(itemName);
+                setItemName('');
+                handleClose();
+              }}
+            >
+              Add
+            </Button>
+          </Stack>
+        </Box>
+      </Modal>
     </ThemeProvider>
   );
 }
