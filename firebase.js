@@ -68,6 +68,7 @@ const signInWithGoogle = async () => {
 const signOutUser = async () => {
     try {
         await signOut(auth);
+        router.push('./auth');
     } catch (error) {
         console.error("Error signing out:", error);
     }
