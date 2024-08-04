@@ -132,7 +132,7 @@ export default function Inventory() {
               p={2}
               bgcolor="#ADD8E6"
             >
-              <Typography variant="h5">{user.displayName}'s Pantry</Typography>
+              <Typography variant="h5">{user.displayName}&apos;s Pantry</Typography>
               <IconButton onClick={handleMenuOpen}>
                 <AccountCircleIcon fontSize="large" />
               </IconButton>
