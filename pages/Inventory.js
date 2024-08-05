@@ -22,10 +22,12 @@ export default function Inventory() {
   const [itemName, setItemName] = useState('');
   const router = useRouter();
 
+
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (user) {
-        setUser(user);
+        const userDoc = await getDoc(doc(firestore, 'users', user.uid));
+        setUser({ ...user, displayName: userDoc.data().name });
         updateInventory(user.uid);
       } else {
         router.push('/auth');

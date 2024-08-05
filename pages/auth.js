@@ -1,117 +1,113 @@
-'use client'
-import React, { useState } from 'react';
-import { auth, signInWithEmail, signUpWithEmail, signOutUser, signInWithGoogle } from "@/firebase";
-import { Avatar, Button, CssBaseline, TextField, Link, Grid, Box, Typography, Container, createTheme, ThemeProvider } from "@mui/material";
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import { onAuthStateChanged } from "firebase/auth";
+import { useState } from 'react';
 import { useRouter } from 'next/router';
+import { Box, Button, Container, TextField, Typography, Link, Grid, Avatar } from '@mui/material';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { auth, firestore } from '@/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
-const theme = createTheme();
-
-export default function Auth() {
+const Auth = () => {
+    const [isSignUp, setIsSignUp] = useState(true);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [name, setName] = useState('');
-    const [isSignUp, setIsSignUp] = useState(false);
     const router = useRouter();
 
-    const handleAuth = async () => {
-        if (isSignUp) {
-            await signUpWithEmail(email, password, name);
-        } else {
-            await signInWithEmail(email, password);
+    const handleAuth = async (event) => {
+        event.preventDefault();
+        try {
+            if (isSignUp) {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+                await updateProfile(user, { displayName: name });
+                await setDoc(doc(firestore, 'users', user.uid), { name });
+            } else {
+                await signInWithEmailAndPassword(auth, email, password);
+            }
+            router.push('./Inventory');
+        } catch (error) {
+            console.error("Error in authentication", error);
         }
-        router.push('./Inventory');
-    }
-
-    const handleGoogleSignIn = async () => {
-        await signInWithGoogle();
-        router.push('./Inventory');
-    }
+    };
 
     return (
-        <ThemeProvider theme={theme}>
-            <Container component="main" maxWidth="xs">
-                <CssBaseline />
-                <Box
-                    sx={{
-                        marginTop: 8,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                    }}
-                >
-                    <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
-                        <LockOutlinedIcon />
-                    </Avatar>
-                    <Typography component="h1" variant="h5">
-                        {isSignUp ? "Sign Up" : "Sign In"}
-                    </Typography>
-                    <Box component="form" onSubmit={(e) => { e.preventDefault(); handleAuth(); }} noValidate sx={{ mt: 1 }}>
+        <Container component="main" maxWidth="xs">
+            <Box
+                sx={{
+                    marginTop: 8,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                }}
+            >
+                <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
+                    <LockOutlinedIcon />
+                </Avatar>
+                <Typography component="h1" variant="h5">
+                    {isSignUp ? 'Sign Up' : 'Sign In'}
+                </Typography>
+                <Box component="form" onSubmit={handleAuth} sx={{ mt: 3 }}>
+                    <Grid container spacing={2}>
                         {isSignUp && (
+                            <Grid item xs={12}>
+                                <TextField
+                                    autoComplete="name"
+                                    name="name"
+                                    required
+                                    fullWidth
+                                    id="name"
+                                    label="Name"
+                                    autoFocus
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                />
+                            </Grid>
+                        )}
+                        <Grid item xs={12}>
                             <TextField
-                                margin="normal"
                                 required
                                 fullWidth
-                                id="name"
-                                label="Name"
-                                name="name"
-                                autoComplete="name"
-                                autoFocus
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
+                                id="email"
+                                label="Email Address"
+                                name="email"
+                                autoComplete="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
                             />
-                        )}
-                        <TextField
-                            margin="normal"
-                            required
-                            fullWidth
-                            id="email"
-                            label="Email Address"
-                            name="email"
-                            autoComplete="email"
-                            autoFocus
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                        />
-                        <TextField
-                            margin="normal"
-                            required
-                            fullWidth
-                            name="password"
-                            label="Password"
-                            type="password"
-                            id="password"
-                            autoComplete="current-password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                        />
-                        <Button
-                            type="submit"
-                            fullWidth
-                            variant="contained"
-                            sx={{ mt: 3, mb: 2 }}
-                        >
-                            {isSignUp ? "Sign Up" : "Sign In"}
-                        </Button>
-                        <Grid container>
-                            <Grid item xs>
-                                <Link href="#" variant="body2" onClick={() => setIsSignUp(!isSignUp)}>
-                                    {isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up"}
-                                </Link>
-                            </Grid>
                         </Grid>
-                        <Button
-                            fullWidth
-                            variant="contained"
-                            sx={{ mt: 3, mb: 2 }}
-                            onClick={handleGoogleSignIn}
-                        >
-                            Sign In with Google
-                        </Button>
-                    </Box>
+                        <Grid item xs={12}>
+                            <TextField
+                                required
+                                fullWidth
+                                name="password"
+                                label="Password"
+                                type="password"
+                                id="password"
+                                autoComplete="current-password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                            />
+                        </Grid>
+                    </Grid>
+                    <Button
+                        type="submit"
+                        fullWidth
+                        variant="contained"
+                        sx={{ mt: 3, mb: 2 }}
+                    >
+                        {isSignUp ? 'Sign Up' : 'Sign In'}
+                    </Button>
+                    <Grid container justifyContent="flex-end">
+                        <Grid item>
+                            <Link href="#" variant="body2" onClick={() => setIsSignUp(!isSignUp)}>
+                                {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+                            </Link>
+                        </Grid>
+                    </Grid>
                 </Box>
-            </Container>
-        </ThemeProvider>
+            </Box>
+        </Container>
     );
-}
+};
+
+export default Auth;
